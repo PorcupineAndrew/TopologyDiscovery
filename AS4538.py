@@ -3,7 +3,7 @@
 # **********************************************************************
 # * Description   : topology discovery for AS4538, a.k.a. China 
 #                           Education and Research Network Center
-# * Last change   : 20:59:34 2020-12-07
+# * Last change   : 23:16:44 2020-12-07
 # * Author        : Yihao Chen
 # * Email         : chenyiha17@mails.tsinghua.edu.cn
 # * License       : www.opensource.org/licenses/bsd-license.php
@@ -22,7 +22,7 @@ output_dir = Path(__file__).resolve().parent / "output"
 if not output_dir.exists(): print(f"create output dir: {output_dir}")
 output_dir.mkdir(exist_ok=True, parents=True)
 
-def get_prefixes():
+def get_prefixes(): # NOTE: IPv6 included as well
     print("get prefixes...")
     prefix_path = output_dir / "prefixes"
 
@@ -41,7 +41,6 @@ def get_prefixes():
 def trace_prefixes(prefixes):
     print("tracing prefixes...")
     def trace_prefix(p):
-        if ipa.ip_network(p).version == 6: return
         trace_path = output_dir / f"trace_{p.replace('/', '-')}"
         if not trace_path.exists():
             json.dump(trace_gateway(p), open(trace_path, "w"))
@@ -67,20 +66,21 @@ def get_emb(G):
 
 
 if __name__ == "__main__":
-    prefixes = get_prefixes()
+    prefixes = list(filter(lambda x: ipa.ip_network(x).version == 4, get_prefixes()))
     trace_prefixes(prefixes)
 
     peer_map = load_all_traces()
-    G = expand_subnet(get_network_graph(peer_map))
+    # G = expand_subnet(get_network_graph(peer_map))
+    G = get_network_graph(peer_map)
     emb = get_emb(G)
 
     # Draw graph
     fig = plt.figure(figsize=(4, 4))
 
     ax = fig.add_subplot(111)
+    draw_prefixes(ax, prefixes)
     # drawG(ax, G)
-    draw_scatter(ax, G, emb)
-
+    # draw_scatter(ax, G, emb)
 
     fig.tight_layout()
     fig.savefig("tmp.pdf", bbox_inches="tight")

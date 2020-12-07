@@ -2,7 +2,7 @@
 #-*- coding: utf-8 -*-
 # **********************************************************************
 # * Description   : topology discovery
-# * Last change   : 21:26:44 2020-12-07
+# * Last change   : 23:16:38 2020-12-07
 # * Author        : Yihao Chen
 # * Email         : chenyiha17@mails.tsinghua.edu.cn
 # * License       : www.opensource.org/licenses/bsd-license.php
@@ -15,8 +15,11 @@ from itertools import product
 
 import networkx as nx
 import matplotlib.pyplot as plt
+import seaborn as sns
 import numpy as np
 from sklearn.manifold import TSNE
+
+from tqdm import tqdm
 
 def trace_route(ip_addr): # NOTE: could raise error
     cmd = ["traceroute", "-4nI", "-q", "1", "-w", "2", str(ip_addr)]
@@ -87,6 +90,7 @@ def get_vec_for_ip(ip_str):
     return np.array([int(bit) for x in ip_str.split(".") for bit in list(f"{int(x):08b}")])
 
 def drawG(ax, G):
+    print("draw G...")
     nodes, degrees = np.array(list(map(list, G.degree))).T
     nodes = nodes.astype(str)
     degrees = degrees.astype(int)
@@ -99,8 +103,25 @@ def cluster(G):
     emb = dict(zip(G.nodes, TSNE(n_components=2, init='pca', n_jobs=8).fit_transform(vecs)))
     return emb
 
-def draw_scatter(ax, nodes, emb):
-    x, y = np.array([emb[i] for i in nodes]).T
-    colors = np.array([get_color_for_ip(i) for i in nodes])
+def draw_scatter(ax, G, emb):
+    print("draw scatter...")
+    for a, b in tqdm(G.edges):
+        xa, ya = emb[a]
+        xb, yb = emb[b]
+        ax.plot([xa, xb], [ya, yb], lw=0.1, alpha=0.6, ls="-", color="gainsboro", zorder=-1)
+
+    x, y = np.array([emb[i] for i in G.nodes]).T
+    colors = np.array([get_color_for_ip(i) for i in G.nodes])
     c = colors / 255.0
-    ax.scatter(x, y, c=c, s=5, marker=".", lw=0)
+    ax.scatter(x, y, c=c, s=8, marker=".", lw=0, alpha=1, zorder=1)
+
+def draw_prefixes(ax, prefixes):
+    print("draw prefixes...")
+    def get_value(p, mask=24):
+        base, masklen = p.split("/")
+        base = int(ipa.ip_address(base)) >> (32-mask)
+        return (np.arange(1 << max(0, mask-int(masklen)))+base).tolist()
+    samples = np.array([v for p in prefixes for v in get_value(p)])
+    
+    sns.distplot(samples, hist=False, kde=True, rug=True, color="darkblue",
+                kde_kws={"linewidth": 3}, rug_kws={"color": "black"}, ax= ax)
