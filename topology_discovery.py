@@ -2,7 +2,7 @@
 #-*- coding: utf-8 -*-
 # **********************************************************************
 # * Description   : topology discovery
-# * Last change   : 20:42:20 2020-12-06
+# * Last change   : 21:26:44 2020-12-07
 # * Author        : Yihao Chen
 # * Email         : chenyiha17@mails.tsinghua.edu.cn
 # * License       : www.opensource.org/licenses/bsd-license.php
@@ -16,10 +16,11 @@ from itertools import product
 import networkx as nx
 import matplotlib.pyplot as plt
 import numpy as np
+from sklearn.manifold import TSNE
 
 def trace_route(ip_addr): # NOTE: could raise error
     cmd = ["traceroute", "-4nI", "-q", "1", "-w", "2", str(ip_addr)]
-    output = subprocess.run(cmd, stdout=subprocess.PIPE)
+    output = subprocess.run(cmd, stdout=subprocess.PIPE, timeout=10)
     route, delay, reachable = [], [], True
     for l in output.stdout.decode().strip().split("\n")[1:]:
         items = l.strip().split()
@@ -52,8 +53,8 @@ def trace_gateway(prefix): # trace the gateway of each /24 subnet
 
     return traces
 
-def get_peer_map(traces):
-    peer_map = {}
+def get_peer_map(traces, peer_map=None):
+    if peer_map is None: peer_map = {}
     def create_if_not_exist(node):
         if node not in peer_map:
             peer_map[node] = set()
@@ -72,8 +73,18 @@ def get_network_graph(peer_map):
         G.add_edges_from(product([node], peers))
     return G
 
+def expand_subnet(G):
+    nodes = list(G.nodes)
+    for n in nodes:
+        if n.split(".")[-1] == "1":
+            G.add_edges_from(product([n], [f"{n[:-1]}{i}" for i in range(2, 255)]))
+    return G
+
 def get_color_for_ip(ip_str):
     return [int(x) for x in ip_str.split(".")][:3]
+
+def get_vec_for_ip(ip_str):
+    return np.array([int(bit) for x in ip_str.split(".") for bit in list(f"{int(x):08b}")])
 
 def drawG(ax, G):
     nodes, degrees = np.array(list(map(list, G.degree))).T
@@ -83,21 +94,13 @@ def drawG(ax, G):
     node_color = np.array([get_color_for_ip(i) for i in nodes]) / 255.0
     nx.draw(G, ax=ax, node_size=node_size, node_color=node_color, width=0.5, linewidths=None)
 
-if __name__ == "__main__":
-    import json
-    trace_file = ["trace_101.5.0.0-16", "trace_101.6.0.0-16", "trace_166.111.0.0-16", "trace_183.172.0.0-16", "trace_183.173.0.0-16", "trace_59.66.0.0-16"]
-    traces_list = map(lambda x: json.load(open(f"./tmp/{x}", "r")), trace_file)
-    traces = [t for traces in traces_list for t in traces]
-    del  traces_list, trace_file
+def cluster(G):
+    vecs = list(map(get_vec_for_ip, G.nodes))
+    emb = dict(zip(G.nodes, TSNE(n_components=2, init='pca', n_jobs=8).fit_transform(vecs)))
+    return emb
 
-    peer_map = get_peer_map(traces)
-    G = get_network_graph(peer_map)
-
-
-    # Draw graph
-    fig = plt.figure(figsize=(4, 4))
-
-    ax = fig.add_subplot(111)
-    drawG(ax, G)
-
-    fig.savefig("tmp.pdf")
+def draw_scatter(ax, nodes, emb):
+    x, y = np.array([emb[i] for i in nodes]).T
+    colors = np.array([get_color_for_ip(i) for i in nodes])
+    c = colors / 255.0
+    ax.scatter(x, y, c=c, s=5, marker=".", lw=0)

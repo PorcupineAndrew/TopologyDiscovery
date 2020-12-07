@@ -3,7 +3,7 @@
 # **********************************************************************
 # * Description   : topology discovery for AS4538, a.k.a. China 
 #                           Education and Research Network Center
-# * Last change   : 20:32:55 2020-12-06
+# * Last change   : 20:59:34 2020-12-07
 # * Author        : Yihao Chen
 # * Email         : chenyiha17@mails.tsinghua.edu.cn
 # * License       : www.opensource.org/licenses/bsd-license.php
@@ -11,9 +11,12 @@
 
 import subprocess
 import json
+import pickle
+import ipaddress as ipa
 from pathlib import Path
-from topology_discovery import trace_gateway
+from topology_discovery import *
 from tqdm import tqdm
+from glob import glob
 
 output_dir = Path(__file__).resolve().parent / "output"
 if not output_dir.exists(): print(f"create output dir: {output_dir}")
@@ -38,12 +41,46 @@ def get_prefixes():
 def trace_prefixes(prefixes):
     print("tracing prefixes...")
     def trace_prefix(p):
+        if ipa.ip_network(p).version == 6: return
         trace_path = output_dir / f"trace_{p.replace('/', '-')}"
         if not trace_path.exists():
             json.dump(trace_gateway(p), open(trace_path, "w"))
     for prefix in tqdm(prefixes): trace_prefix(prefix)
 
+def load_all_traces():
+    print("loading traces...")
+    peer_map = {}
+    for f in tqdm(glob(str(output_dir / "trace_*"))):
+        get_peer_map(json.load(open(f, "r")), peer_map=peer_map)
+    return peer_map
+
+def get_emb(G):
+    emb_path = output_dir / "emb"
+    if emb_path.exists():
+        print("loading emb...")
+        emb = pickle.load(open(emb_path, "rb"))
+    else:
+        print("training emb...")
+        emb = cluster(G)
+        pickle.dump(emb, open(emb_path, "wb"))
+    return emb
+
 
 if __name__ == "__main__":
     prefixes = get_prefixes()
     trace_prefixes(prefixes)
+
+    peer_map = load_all_traces()
+    G = expand_subnet(get_network_graph(peer_map))
+    emb = get_emb(G)
+
+    # Draw graph
+    fig = plt.figure(figsize=(4, 4))
+
+    ax = fig.add_subplot(111)
+    # drawG(ax, G)
+    draw_scatter(ax, G, emb)
+
+
+    fig.tight_layout()
+    fig.savefig("tmp.pdf", bbox_inches="tight")
