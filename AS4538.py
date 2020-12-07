@@ -3,7 +3,7 @@
 # **********************************************************************
 # * Description   : topology discovery for AS4538, a.k.a. China 
 #                           Education and Research Network Center
-# * Last change   : 23:16:44 2020-12-07
+# * Last change   : 00:34:17 2020-12-08
 # * Author        : Yihao Chen
 # * Email         : chenyiha17@mails.tsinghua.edu.cn
 # * License       : www.opensource.org/licenses/bsd-license.php
@@ -74,13 +74,20 @@ if __name__ == "__main__":
     G = get_network_graph(peer_map)
     emb = get_emb(G)
 
-    # Draw graph
-    fig = plt.figure(figsize=(4, 4))
+    # ==============================================
+    fig = plt.figure(figsize=(8, 8))
 
-    ax = fig.add_subplot(111)
+    ax = fig.add_subplot(211)
+    ax.set_title("Prefix distribution of AS4538")
     draw_prefixes(ax, prefixes)
-    # drawG(ax, G)
-    # draw_scatter(ax, G, emb)
+
+    ax = fig.add_subplot(223)
+    ax.set_title("Topology of AS4538")
+    drawG(ax, G)
+
+    ax = fig.add_subplot(224)
+    ax.set_title("IP address map of AS4538")
+    draw_scatter(ax, G, emb)
 
     fig.tight_layout()
-    fig.savefig("tmp.pdf", bbox_inches="tight")
+    fig.savefig("AS4538.pdf", bbox_inches="tight")

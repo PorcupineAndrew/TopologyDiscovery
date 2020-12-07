@@ -2,7 +2,7 @@
 #-*- coding: utf-8 -*-
 # **********************************************************************
 # * Description   : topology discovery
-# * Last change   : 23:16:38 2020-12-07
+# * Last change   : 00:23:52 2020-12-08
 # * Author        : Yihao Chen
 # * Email         : chenyiha17@mails.tsinghua.edu.cn
 # * License       : www.opensource.org/licenses/bsd-license.php
@@ -115,13 +115,40 @@ def draw_scatter(ax, G, emb):
     c = colors / 255.0
     ax.scatter(x, y, c=c, s=8, marker=".", lw=0, alpha=1, zorder=1)
 
+    ax.set_xticks([])
+    ax.set_yticks([])
+
 def draw_prefixes(ax, prefixes):
     print("draw prefixes...")
     def get_value(p, mask=24):
         base, masklen = p.split("/")
         base = int(ipa.ip_address(base)) >> (32-mask)
         return (np.arange(1 << max(0, mask-int(masklen)))+base).tolist()
-    samples = np.array([v for p in prefixes for v in get_value(p)])
+
+    samples = np.array([v for p in prefixes for v in get_value(p, mask=24)])
+    sns.distplot(samples, hist=True, bins=24, kde=True, rug=True, color="darkblue",
+              kde_kws={"linewidth": 3}, rug_kws={"color": "black"}, ax= ax)
+
+    x, c = np.unique([v for p in prefixes for v in get_value(p, mask=8)], return_counts=True)
+    xx = []
+    for i in x[np.argsort(c)[::-1]]:
+        check = True
+        for j in xx:
+            if abs(i-j) <= 10:
+                check = False
+                break
+        if check: xx.append(i)
+    x = np.array(xx)
+
+    def get_one_prefix(first_byte):
+        for p in prefixes:
+            if int(p.split(".")[0]) == first_byte:
+                return p
+
+    xticks_label = [get_one_prefix(int(i)) for i in x]
+    xticks = (x << 16)
+    ax.set_xticks(xticks)
+    ax.set_xticklabels(xticks_label, rotation=30)
     
-    sns.distplot(samples, hist=False, kde=True, rug=True, color="darkblue",
-                kde_kws={"linewidth": 3}, rug_kws={"color": "black"}, ax= ax)
+    ax.set_xlabel("")
+    ax.set_ylabel("density")
