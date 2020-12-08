@@ -2,7 +2,7 @@
 #-*- coding: utf-8 -*-
 # **********************************************************************
 # * Description   : topology discovery
-# * Last change   : 00:23:52 2020-12-08
+# * Last change   : 10:30:50 2020-12-08
 # * Author        : Yihao Chen
 # * Email         : chenyiha17@mails.tsinghua.edu.cn
 # * License       : www.opensource.org/licenses/bsd-license.php
@@ -15,6 +15,7 @@ from itertools import product
 
 import networkx as nx
 import matplotlib.pyplot as plt
+from matplotlib.offsetbox import AnchoredText
 import seaborn as sns
 import numpy as np
 from sklearn.manifold import TSNE
@@ -129,6 +130,7 @@ def draw_prefixes(ax, prefixes):
     sns.distplot(samples, hist=True, bins=24, kde=True, rug=True, color="darkblue",
               kde_kws={"linewidth": 3}, rug_kws={"color": "black"}, ax= ax)
 
+    # process xticks
     x, c = np.unique([v for p in prefixes for v in get_value(p, mask=8)], return_counts=True)
     xx = []
     for i in x[np.argsort(c)[::-1]]:
@@ -149,6 +151,18 @@ def draw_prefixes(ax, prefixes):
     xticks = (x << 16)
     ax.set_xticks(xticks)
     ax.set_xticklabels(xticks_label, rotation=30)
+
+    # process txt
+    l, c = np.unique([int(p.split("/")[1]) for p in prefixes], return_counts=True)
+    idx = np.argsort(c)[::-1]
+    l = l[idx]
+    c = c[idx]
+    total = c.sum()
+    txt = f"{'count':>9s}{'ratio':>8s}\n"
+    txt += "\n".join([rf"/{k}:{v:>5d}{f'{v/total:.2%}':>8s}"for k,v in zip(l, c)])
+    at = AnchoredText(txt, prop=dict(size=10, family="monospace"), frameon=True, loc=2)
+    at.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
+    ax.add_artist(at)
     
     ax.set_xlabel("")
     ax.set_ylabel("density")

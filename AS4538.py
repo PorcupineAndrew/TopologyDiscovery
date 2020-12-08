@@ -3,7 +3,7 @@
 # **********************************************************************
 # * Description   : topology discovery for AS4538, a.k.a. China 
 #                           Education and Research Network Center
-# * Last change   : 00:34:17 2020-12-08
+# * Last change   : 00:48:02 2020-12-08
 # * Author        : Yihao Chen
 # * Email         : chenyiha17@mails.tsinghua.edu.cn
 # * License       : www.opensource.org/licenses/bsd-license.php
@@ -74,11 +74,14 @@ if __name__ == "__main__":
     G = get_network_graph(peer_map)
     emb = get_emb(G)
 
+
+
     # ==============================================
     fig = plt.figure(figsize=(8, 8))
 
     ax = fig.add_subplot(211)
     ax.set_title("Prefix distribution of AS4538")
+    ax.grid(True)
     draw_prefixes(ax, prefixes)
 
     ax = fig.add_subplot(223)
