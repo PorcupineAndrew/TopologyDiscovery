@@ -3,7 +3,7 @@
 # **********************************************************************
 # * Description   : topology discovery for AS4538, a.k.a. China 
 #                           Education and Research Network Center
-# * Last change   : 00:48:02 2020-12-08
+# * Last change   : 17:21:46 2020-12-19
 # * Author        : Yihao Chen
 # * Email         : chenyiha17@mails.tsinghua.edu.cn
 # * License       : www.opensource.org/licenses/bsd-license.php
@@ -18,7 +18,7 @@ from topology_discovery import *
 from tqdm import tqdm
 from glob import glob
 
-output_dir = Path(__file__).resolve().parent / "output"
+output_dir = Path(__file__).resolve().parent / "output" / "topology_discovery"
 if not output_dir.exists(): print(f"create output dir: {output_dir}")
 output_dir.mkdir(exist_ok=True, parents=True)
 
@@ -94,3 +94,4 @@ if __name__ == "__main__":
 
     fig.tight_layout()
     fig.savefig("AS4538.pdf", bbox_inches="tight")
+    fig.savefig("AS4538.png", bbox_inches="tight")
