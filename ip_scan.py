@@ -2,7 +2,7 @@
 #-*- coding: utf-8 -*-
 # **********************************************************************
 # * Description   : ip asset scanning based on masscan & nmap
-# * Last change   : 20:04:44 2020-12-19
+# * Last change   : 22:37:09 2020-12-19
 # * Author        : Yihao Chen
 # * Email         : chenyiha17@mails.tsinghua.edu.cn
 # * License       : www.opensource.org/licenses/bsd-license.php
@@ -13,8 +13,8 @@ import subprocess
 import ipaddress as ipa
 
 def masscan(prefix):
-    cmd = ["masscan", str(prefix), "--rate", "10000", "-p80"]
-    output = subprocess.run(cmd, stdout=subprocess.PIPE, timeout=60)
+    cmd = ["masscan", str(prefix), "--rate", "10000", "-p80", "--ping"]
+    output = subprocess.run(cmd, stdout=subprocess.PIPE, timeout=120)
     ips = []
     for l in output.stdout.decode().strip().split("\n"):
         try:
@@ -44,7 +44,7 @@ def nmap(ip_address):
 
     cmd = ["nmap", "-nFA", str(ip_address)]
     try:
-        output = subprocess.run(cmd, stdout=subprocess.PIPE, timeout=120)
+        output = subprocess.run(cmd, stdout=subprocess.PIPE, timeout=600)
         paras = output.stdout.decode().strip().split("\n\n")
         for l in paras[0].split("\n")[3:]: parse_namp_result(l)
     except Exception as e:
