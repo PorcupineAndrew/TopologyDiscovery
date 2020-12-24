@@ -2,7 +2,7 @@
 #-*- coding: utf-8 -*-
 # **********************************************************************
 # * Description   : topology discovery
-# * Last change   : 16:50:13 2020-12-24
+# * Last change   : 21:06:03 2020-12-24
 # * Author        : Yihao Chen
 # * Email         : chenyiha17@mails.tsinghua.edu.cn
 # * License       : www.opensource.org/licenses/bsd-license.php
@@ -188,8 +188,6 @@ def query_node_info(G):
         r1 = result.group(1).replace("\n", " ").strip() if result else ""
         return r0, r1
 
-    # print(get_info("118.229.2.78"))
-    # exit()
     n_worker = min(len(nodes), 256)
     with ThreadPoolExecutor(max_workers=n_worker) as executor:
         info = list(executor.map(get_info, nodes))
