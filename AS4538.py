@@ -3,7 +3,7 @@
 # **********************************************************************
 # * Description   : topology discovery for AS4538, a.k.a. China 
 #                           Education and Research Network Center
-# * Last change   : 17:21:46 2020-12-19
+# * Last change   : 16:50:54 2020-12-24
 # * Author        : Yihao Chen
 # * Email         : chenyiha17@mails.tsinghua.edu.cn
 # * License       : www.opensource.org/licenses/bsd-license.php
@@ -12,6 +12,7 @@
 import subprocess
 import json
 import pickle
+import pandas as pd
 import ipaddress as ipa
 from pathlib import Path
 from topology_discovery import *
@@ -64,6 +65,17 @@ def get_emb(G):
         pickle.dump(emb, open(emb_path, "wb"))
     return emb
 
+def get_node_info(G):
+    node_info_path = output_dir / "node_info.csv"
+    if node_info_path.exists():
+        print("loading node info...")
+        df_node_info = pd.read_csv(node_info_path)
+    else:
+        print("querying node info...")
+        df_node_info = query_node_info(G)
+        df_node_info.to_csv(node_info_path, index=False)
+    return df_node_info
+
 
 if __name__ == "__main__":
     prefixes = list(filter(lambda x: ipa.ip_network(x).version == 4, get_prefixes()))
@@ -73,7 +85,8 @@ if __name__ == "__main__":
     # G = expand_subnet(get_network_graph(peer_map))
     G = get_network_graph(peer_map)
     emb = get_emb(G)
-
+    df_node_info = get_node_info(G)
+    save_node_info_table(df_node_info)
 
 
     # ==============================================

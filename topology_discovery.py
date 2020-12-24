@@ -2,7 +2,7 @@
 #-*- coding: utf-8 -*-
 # **********************************************************************
 # * Description   : topology discovery
-# * Last change   : 11:31:40 2020-12-08
+# * Last change   : 16:50:13 2020-12-24
 # * Author        : Yihao Chen
 # * Email         : chenyiha17@mails.tsinghua.edu.cn
 # * License       : www.opensource.org/licenses/bsd-license.php
@@ -12,12 +12,14 @@ import subprocess
 import ipaddress as ipa 
 from concurrent.futures import ThreadPoolExecutor
 from itertools import product
+import re
 
 import networkx as nx
 import matplotlib.pyplot as plt
 from matplotlib.offsetbox import AnchoredText
 import seaborn as sns
 import numpy as np
+import pandas as pd
 from sklearn.manifold import TSNE
 
 from tqdm import tqdm
@@ -166,3 +168,37 @@ def draw_prefixes(ax, prefixes):
     
     ax.set_xlabel("")
     ax.set_ylabel("density")
+
+def query_node_info(G):
+    nodes, degrees = np.array(list(map(list, G.degree))).T
+    nodes = nodes.astype(str)
+    degrees = degrees.astype(int)
+    idx = np.argsort(degrees)[::-1]
+    nodes = nodes[idx]
+    degrees = degrees[idx]
+
+    rx0 = re.compile(r"IP段名称：([a-zA-Z0-9-_]+?)<br>")
+    rx1 = re.compile(r"IP段描述：([\s\S]+?)<br/>")
+    def get_info(ip):
+        target = f"http://ip.bczs.net/{ip}"
+        text = subprocess.check_output(["curl", "-s", target], timeout=10).decode()
+        result = rx0.search(text)
+        r0 = result.group(1).replace("\n", " ").strip() if result else ""
+        result = rx1.search(text)
+        r1 = result.group(1).replace("\n", " ").strip() if result else ""
+        return r0, r1
+
+    # print(get_info("118.229.2.78"))
+    # exit()
+    n_worker = min(len(nodes), 256)
+    with ThreadPoolExecutor(max_workers=n_worker) as executor:
+        info = list(executor.map(get_info, nodes))
+    names, descrs = np.array(info).T
+    df = pd.DataFrame.from_dict({"node": nodes, "name": names, "degrees": degrees, "descr": descrs})
+    return df
+
+def save_node_info_table(df_node_info):
+    df_agg = df_node_info.groupby(["name", "descr"]).agg({"degrees": ["count", "max"]})
+    df_agg.columns = ["instances", "degree_max"]
+    df_agg = df_agg.reset_index().sort_values(by=["degree_max", "instances"], ascending=False, ignore_index=True)
+    df_agg.to_html("node_info.html")
